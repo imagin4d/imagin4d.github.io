@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="description"
+      content="IMAGIN-4D: spatio-temporal image conditioning for controllable 4D human-object interaction generation. Anonymous project page."
+    />
+    <meta
+      name="keywords"
+      content="IMAGIN-4D, 4D, human-object interaction, HOI, diffusion, image conditioning, anonymous submission"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>IMAGIN-4D: Image-Guided Controllable Interaction Generation</title>
+
+    <!-- Tiny inline SVG favicon (no binary asset to commit). -->
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23111'/%3E%3Ctext x='50%25' y='54%25' font-family='Google Sans, sans-serif' font-weight='700' font-size='34' text-anchor='middle' dominant-baseline='middle' fill='white'%3E4D%3C/text%3E%3C/svg%3E"
+    />
+
+    <link
+      href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="./static/css/bulma.min.css" />
+    <link rel="stylesheet" href="./static/css/bulma-carousel.min.css" />
+    <link rel="stylesheet" href="./static/css/bulma-slider.min.css" />
+    <link rel="stylesheet" href="./static/css/fontawesome.all.min.css" />
+    <link rel="stylesheet" href="./static/css/academicons.min.css" />
+    <link rel="stylesheet" href="./static/css/index.css" />
+
+    <style>
+      .center {
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+        border-radius: 10px;
+      }
+      .result-figure {
+        max-width: 100%;
+        height: auto;
+        display: block;
+        margin: 0 auto;
+        border-radius: 8px;
+      }
+      .figure-caption {
+        font-size: 0.95rem;
+        color: #333;
+        text-align: justify;
+        padding-top: 0.8em;
+        max-width: 960px;
+        margin: 0 auto;
+      }
+      .figure-caption b {
+        color: #111;
+      }
+      .section-tight {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+      }
+      .hero .container {
+        padding-left: 1.5rem;
+        padding-right: 1.5rem;
+      }
+
+      /* ---------- Video-result grids ---------- */
+      .video-grid {
+        display: grid;
+        gap: 14px 14px;
+        margin: 0 auto 22px auto;
+        max-width: 1100px;
+      }
+      .vg-tile {
+        position: relative;
+        background: #f3f3f3;
+        border-radius: 10px;
+        overflow: hidden;
+        aspect-ratio: 1 / 1;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      }
+      .vg-tile video,
+      .vg-tile img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .vg-tag {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        padding: 3px 9px;
+        font-family: 'Google Sans', sans-serif;
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: #fff;
+        background: rgba(0, 0, 0, 0.55);
+        border-radius: 999px;
+        letter-spacing: 0.02em;
+        backdrop-filter: blur(2px);
+      }
+      .vg-tag.tag-ours {
+        background: #b22222;
+      }
+      .vg-tag.tag-cond {
+        background: #2c2c2c;
+      }
+      .vg-col-label {
+        text-align: center;
+        font-family: 'Google Sans', sans-serif;
+        font-size: 0.92rem;
+        font-weight: 600;
+        color: #222;
+        padding-bottom: 4px;
+      }
+      .vg-col-label.col-ours {
+        color: #b22222;
+      }
+      .vg-row-label {
+        font-family: 'Google Sans', sans-serif;
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: #555;
+        text-align: right;
+        align-self: center;
+        padding-right: 6px;
+      }
+      .vg-sample-header {
+        grid-column: 1 / -1;
+        font-family: 'Google Sans', sans-serif;
+        font-size: 0.9rem;
+        color: #777;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin: 6px 0 -4px 4px;
+      }
+      .vg-prompt {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        padding: 6px 10px;
+        font-family: 'Google Sans', sans-serif;
+        font-size: 0.78rem;
+        line-height: 1.25;
+        color: #fff;
+        background: rgba(0, 0, 0, 0.32);
+        text-align: center;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+      }
+
+      /* Flip grid: 4 columns (cond | orig | cond_m | mirror) */
+      .grid-flip {
+        grid-template-columns: 1fr 1fr 1fr 1fr;
+      }
+      .grid-flip .pair-sep {
+        grid-column: span 2;
+        text-align: center;
+        font-family: 'Google Sans', sans-serif;
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: #444;
+        padding-bottom: 2px;
+      }
+      /* SOTA grid: 4 columns (cond | ours | choisimg | vihoi) */
+      .grid-sota {
+        grid-template-columns: 1fr 1fr 1fr 1fr;
+      }
+      /* Sketch grid: 4 columns (sketch | video | sketch | video) — 2 samples per row */
+      .grid-sketch {
+        grid-template-columns: 1fr 1fr 1fr 1fr;
+      }
+      /* Gallery grid: 2-col tile (cond | video) repeated */
+      .grid-gallery {
+        grid-template-columns: 1fr 1fr 1fr 1fr;
+      }
+
+      @media (max-width: 768px) {
+        .grid-flip,
+        .grid-sota,
+        .grid-sketch,
+        .grid-gallery {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+    </style>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script defer src="./static/js/fontawesome.all.min.js"></script>
+    <script src="https://unpkg.com/interactjs/dist/interact.min.js"></script>
+    <script type="text/x-mathjax-config">
+      MathJax.Hub.Config({ tex2jax: { inlineMath: [['$','$'], ['\\(','\\)']] } });
+    </script>
+    <script
+      type="text/javascript"
+      src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
+    ></script>
+    <script data-goatcounter="https://imagin4d.goatcounter.com/count"
+            async src="//gc.zgo.at/count.js"></script>
+  </head>
+
+  <body>
+    <!-- ============================================================ -->
+    <!-- HERO                                                         -->
+    <!-- ============================================================ -->
+    <section class="hero">
+      <div class="hero-body">
+        <div class="container is-max-desktop">
+          <div class="columns is-centered">
+            <div class="column has-text-centered">
+              <h1 class="title is-1 publication-title">
+                <span style="font-variant: small-caps">IMAGIN-4D</span>:
+                Image-Guided Controllable Interaction Generation
+              </h1>
+              <h1 class="is-size-3">
+                <strong style="color: brown">Anonymous Submission</strong>
+              </h1>
+              <div class="is-size-5 publication-authors">
+                <span class="author-block">Anonymous Authors</span>
+              </div>
+
+              <div class="column has-text-centered">
+                <div class="publication-links">
+                  <span class="link-block">
+                    <a
+                      href="./static/paper_anonymous.pdf"
+                      class="external-link button is-normal is-rounded is-dark"
+                    >
+                      <span class="icon"><i class="fas fa-file-pdf"></i></span>
+                      <span>Paper</span>
+                    </a>
+                  </span>
+                  <span class="link-block">
+                    <a
+                      href="#video"
+                      class="external-link button is-normal is-rounded is-dark"
+                    >
+                      <span class="icon"><i class="fas fa-play-circle"></i></span>
+                      <span>Video</span>
+                    </a>
+                  </span>
+                  <br />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- TEASER                                                       -->
+    <!-- ============================================================ -->
+    <section class="hero teaser">
+      <div class="container is-max-desktop">
+        <div class="hero-body">
+          <img
+            src="./static/figures/teaser_v4.png"
+            alt="Image-conditioned 4D HOI generation teaser"
+            class="result-figure"
+          />
+          <div class="figure-caption" style="padding-top: 1.2em">
+            <b>Image-conditioned 4D HOI generation.</b>
+            Given a text prompt, object geometry, object waypoints, and a
+            reference image, IMAGIN-4D synthesizes a 4D human-object
+            interaction sequence. Text and waypoints specify the action and
+            object trajectory, but leave fine-grained interaction details such
+            as pose, contact, and layout ambiguous. We resolve this ambiguity
+            with a reference image that specifies the interaction snapshot.
+            To test whether IMAGIN-4D follows this visual evidence, we keep
+            the text prompt, object geometry, and waypoints fixed, and mirror
+            only the reference image. IMAGIN-4D generates different motions
+            that satisfy the corresponding snapshot: body pose, object pose,
+            contact, and body-object layout change consistently with the
+            mirrored reference. This is achieved through spatio-temporal image
+            conditioning, which separates spatial cues for the depicted
+            interaction state from frame-aware cues for the surrounding
+            motion. Unlike single-token image conditioning, this preserves
+            fine-grained visual evidence while generating the HOI sequence.
+          </div>
+        </div>
+      </div>
+      <br />
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- VIDEO                                                        -->
+    <!-- ============================================================ -->
+    <section id="video" class="section section-tight" style="padding-top: 0">
+      <div class="container is-max-desktop">
+        <div class="columns is-centered has-text-centered">
+          <div class="column is-full-width">
+            <h2 class="title is-3">Video</h2>
+            <video
+              controls
+              preload="metadata"
+              playsinline
+              poster="./static/video/IMAGIN-4D_poster.jpg"
+              style="width: 100%; max-width: 960px; display: block; margin: 0 auto; border-radius: 10px; background: #000;"
+            >
+              <source src="./static/video/IMAGIN-4D.mp4" type="video/mp4" />
+              Your browser does not support HTML5 video.
+            </video>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- ABSTRACT / EXPLANATION                                       -->
+    <!-- ============================================================ -->
+    <section class="hero is-light is-small">
+      <div class="container is-max-desktop">
+        <div class="columns is-centered has-text-centered">
+          <div class="column is-full-width">
+            <br /><br />
+            <h2 class="title is-3">Abstract</h2>
+            <div class="content has-text-justified">
+              <p>
+                Generating human-object interactions (HOI) is central to
+                character animation, robotics, AR/VR, and embodied AI. Recent
+                HOI generation methods synthesize motion from text, object
+                geometry, and sparse waypoints, controlling action semantics
+                and object trajectories. However, these signals underspecify
+                interaction: the same prompt and trajectory can produce
+                different grasps, approach directions, body poses, object
+                poses, contacts, and body-object layouts. We address this
+                ambiguity with a reference image as a visual specification of
+                the desired interaction snapshot. However, a single global
+                image representation conflates distinct cues and conditions
+                all frames on identical visual evidence.
+              </p>
+              <p>
+                We therefore introduce <b>IMAGIN-4D</b>, a diffusion-based
+                HOI generator that decomposes image conditioning
+                spatio-temporally. For spatial conditioning, IMAGIN-4D
+                extracts supervised interaction-state tokens for body pose,
+                object pose, body-object contact, and spatial relationships
+                at the depicted frame. For temporal conditioning, it computes
+                frame-aware tokens by querying image patches per generated
+                frame, allowing sequence segments to attend to different
+                visual cues from the same image. To balance image, text, and
+                waypoint cues, IMAGIN-4D uses role-aware conditioning: text,
+                waypoints, and interaction-state tokens use separate AdaLN
+                streams, while frame-aware visual tokens cross-attend with
+                motion tokens.
+              </p>
+              <p>
+                Since HOI motion datasets lack paired images, we build a
+                synthetic motion-to-image rendering pipeline from
+                FullBodyManipulation (FBM) and introduce an image-adherence
+                metric to evaluate whether generated motions match the
+                reference snapshot. Experiments on FBM and BEHAVE show that
+                IMAGIN-4D improves fine-grained interaction control over
+                single-token and uniformly image-conditioned baselines while
+                preserving waypoint-following and motion quality.
+              </p>
+            </div>
+          </div>
+        </div>
+        <br />
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- METHOD                                                       -->
+    <!-- ============================================================ -->
+    <section class="section section-tight">
+      <div class="container is-max-desktop">
+        <div class="columns is-centered has-text-centered">
+          <div class="column is-full-width">
+            <h2 class="title is-3">Method Overview</h2>
+            <img
+              src="./static/figures/method.png"
+              alt="IMAGIN-4D method overview"
+              class="result-figure"
+            />
+            <div class="figure-caption" style="padding-top: 1.2em">
+              Given a reference image $\mathcal{I}$, text prompt $y$, object
+              geometry $\mathcal{O}$, and sparse waypoints $\mathcal{W}$,
+              IMAGIN-4D generates a 4D human-object motion sequence. A frozen
+              image encoder extracts patch tokens $\mathbf{P}$ from
+              $\mathcal{I}$. The Spatially Factorized Image Encoder (SFIE)
+              reads these patches with role-specific queries and produces
+              supervised latent tokens for contact $\boldsymbol{\kappa}$,
+              human pose $\boldsymbol{\rho}$, object pose $\boldsymbol{\xi}$,
+              and body-object spatial relation $\boldsymbol{\nu}$. These
+              tokens are trained to match role-autoencoder latents derived
+              from the paired motion sequence. Their concatenated summary
+              $\bar{\boldsymbol{\zeta}}$ predicts the reference frame
+              $\hat{t}$ depicted by the image. In parallel, the Frame-Aware
+              Image Encoder re-queries $\mathbf{P}$ with frame- and
+              text-conditioned queries to produce per-frame visual tokens
+              $\boldsymbol{\mu}_t$. The motion denoiser routes conditions by
+              role: base conditioning, waypoint features, and window-gated
+              spatial image evidence modulate transformer layers through
+              separate AdaLN streams, while $\boldsymbol{\mu}_t$ enters
+              through late cross-attention. Sampling-time guidance improves
+              image adherence.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- RESULTS: MIRRORED-REFERENCE ADHERENCE                         -->
+    <!-- ============================================================ -->
+    <section class="hero is-light is-small">
+      <div class="hero-body">
+        <div class="container is-max-desktop">
+          <h2 class="title is-2 has-text-centered">
+            How Image Controls Motion Generation
+          </h2>
+          <br />
+
+          <!-- Sample: table -->
+          <div class="video-grid grid-flip">
+            <div class="vg-tile">
+              <span class="vg-tag tag-cond">Ref. Img</span>
+              <img src="./static/results/mirrored_reference/table/cond.png" alt="reference image (orig)" />
+            </div>
+            <div class="vg-tile">
+              <span class="vg-tag tag-ours">Ours</span>
+              <video data-autoplay-on-view autoplay muted loop playsinline preload="auto" disableRemotePlayback x-webkit-airplay="deny"
+                poster="./static/results/mirrored_reference/table/ours.jpg">
+                <source src="./static/results/mirrored_reference/table/ours.mp4" type="video/mp4" />
+              </video>
+              <div class="vg-prompt">"The person moves the table on the floor"</div>
+            </div>
+            <div class="vg-tile">
+              <span class="vg-tag tag-cond">Mirrored Ref. Img</span>
+              <img src="./static/results/mirrored_reference/table/cond_mirror.png" alt="reference image (mirrored)" />
+            </div>
+            <div class="vg-tile">
+              <span class="vg-tag tag-ours">Ours</span>
+              <video data-autoplay-on-view autoplay muted loop playsinline preload="auto" disableRemotePlayback x-webkit-airplay="deny"
+                poster="./static/results/mirrored_reference/table/ours_mirror.jpg">
+                <source src="./static/results/mirrored_reference/table/ours_mirror.mp4" type="video/mp4" />
+              </video>
+              <div class="vg-prompt">"The person moves the table on the floor"</div>
+            </div>
+          </div>
+
+          <!-- Sample: trashcan -->
+          <div class="video-grid grid-flip">
+            <div class="vg-tile">
+              <span class="vg-tag tag-cond">Ref. Img</span>
+              <img src="./static/results/mirrored_reference/trashcan/cond.png" alt="reference image (orig)" />
+            </div>
+            <div class="vg-tile">
+              <span class="vg-tag tag-ours">Ours</span>
+              <video data-autoplay-on-view autoplay muted loop playsinline preload="auto" disableRemotePlayback x-webkit-airplay="deny"
+                poster="./static/results/mirrored_reference/trashcan/ours.jpg">
+                <source src="./static/results/mirrored_reference/trashcan/ours.mp4" type="video/mp4" />
+              </video>
+              <div class="vg-prompt">"Pull the trashcan and set it down"</div>
+            </div>
+            <div class="vg-tile">
+              <span class="vg-tag tag-cond">Mirrored Ref. Img</span>
+              <img src="./static/results/mirrored_reference/trashcan/cond_mirror.png" alt="reference image (mirrored)" />
+            </div>
+            <div class="vg-tile">
+              <span class="vg-tag tag-ours">Ours</span>
+              <video data-autoplay-on-view autoplay muted loop playsinline preload="auto" disableRemotePlayback x-webkit-airplay="deny"
+                poster="./static/results/mirrored_reference/trashcan/ours_mirror.jpg">
+                <source src="./static/results/mirrored_reference/trashcan/ours_mirror.mp4" type="video/mp4" />
+              </video>
+              <div class="vg-prompt">"Pull the trashcan and set it down"</div>
+            </div>
+          </div>
+
+          <!-- Sample: box -->
+          <div class="video-grid grid-flip">
+            <div class="vg-tile">
+              <span class="vg-tag tag-cond">Ref. Img</span>
+              <img src="./static/results/mirrored_reference/box/cond.png" alt="reference image (orig)" />
+            </div>
+            <div class="vg-tile">
+              <span class="vg-tag tag-ours">Ours</span>
+              <video data-autoplay-on-view autoplay muted loop playsinline preload="auto" disableRemotePlayback x-webkit-airplay="deny"
+                poster="./static/results/mirrored_reference/box/ours.jpg">
+                <source src="./static/results/mirrored_reference/box/ours.mp4" type="video/mp4" />
+              </video>
+              <div class="vg-prompt">"Push the large box and set it down"</div>
+            </div>
+            <div class="vg-tile">
+              <span class="vg-tag tag-cond">Mirrored Ref. Img</span>
+              <img src="./static/results/mirrored_reference/box/cond_mirror.png" alt="reference image (mirrored)" />
+            </div>
+            <div class="vg-tile">
+              <span class="vg-tag tag-ours">Ours</span>
+              <video data-autoplay-on-view autoplay muted loop playsinline preload="auto" disableRemotePlayback x-webkit-airplay="deny"
+                poster="./static/results/mirrored_reference/box/ours_mirror.jpg">
+                <source src="./static/results/mirrored_reference/box/ours_mirror.mp4" type="video/mp4" />
+              </video>
+              <div class="vg-prompt">"Push the large box and set it down"</div>
+            </div>
+          </div>
+
+          <div class="figure-caption" style="padding-top: 1.2em">
+            <b>Mirrored-reference consistency test.</b>
+            We horizontally mirror only the reference image at inference time
+            while keeping the text prompt, object geometry, and waypoints
+            fixed. The generated contact side and body-object layout change
+            with the mirrored image, showing that IMAGIN-4D uses visual
+            evidence rather than ignoring the image condition. The motion is
+            not an exact mirror because the unchanged non-image conditions
+            must still be satisfied.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- RESULTS: SOTA COMPARISON                                      -->
+    <!-- ============================================================ -->
+    <section class="hero is-small">
+      <div class="hero-body">
+        <div class="container is-max-desktop">
+          <h2 class="title is-2 has-text-centered">
+            Comparison with State of the Art
+          </h2>
+          <br />
+
+          <!-- Sample: trashcan -->
+          <div class="video-grid grid-sota">
+            <div class="vg-tile">
+              <span class="vg-tag tag-cond">Ref. Img</span>
+              <img src="./static/results/sota_comparison/trashcan/cond.png" alt="reference image" />
+            </div>
+            <div class="vg-tile">
+              <span class="vg-tag tag-ours">Ours</span>
+              <video data-autoplay-on-view autoplay muted loop playsinline preload="auto" disableRemotePlayback x-webkit-airplay="deny"
+                poster="./static/results/sota_comparison/trashcan/ours.jpg">
+                <source src="./static/results/sota_comparison/trashcan/ours.mp4" type="video/mp4" />
+              </video>
+              <div class="vg-prompt">"Lift the trashcan, move the trashcan and put it down"</div>
+            </div>
+            <div class="vg-tile">
+              <span class="vg-tag">CHOIS+Img</span>
+              <video data-autoplay-on-view autoplay muted loop playsinline preload="auto" disableRemotePlayback x-webkit-airplay="deny"
+                poster="./static/results/sota_comparison/trashcan/choisimg.jpg">
+                <source src="./static/results/sota_comparison/trashcan/choisimg.mp4" type="video/mp4" />
+              </video>
+              <div class="vg-prompt">"Lift the trashcan, move the trashcan and put it down"</div>
+            </div>
+            <div class="vg-tile">
+              <span class="vg-tag">ViHOI*</span>
+              <video data-autoplay-on-view autoplay muted loop playsinline preload="auto" disableRemotePlayback x-webkit-airplay="deny"
+                poster="./static/results/sota_comparison/trashcan/vihoi.jpg">
+                <source src="./static/results/sota_comparison/trashcan/vihoi.mp4" type="video/mp4" />
+              </video>
+              <div class="vg-prompt">"Lift the trashcan, move the trashcan and put it down"</div>
+            </div>
+          </div>
+
+          <!-- Sample: floorlamp -->
+          <div class="video-grid grid-sota">
+            <div class="vg-tile">
+              <span class="vg-tag tag-cond">Ref. Img</span>
+              <img src="./static/results/sota_comparison/floorlamp/cond.png" alt="reference image" />
+            </div>
+            <div class="vg-tile">
+              <span class="vg-tag tag-ours">Ours</span>
+              <video data-autoplay-on-view autoplay muted loop playsinline preload="auto" disableRemotePlayback x-webkit-airplay="deny"
+                poster="./static/results/sota_comparison/floorlamp/ours.jpg">
+                <source src="./static/results/sota_comparison/floorlamp/ours.mp4" type="video/mp4" />
+              </video>
+              <div class="vg-prompt">"Lift the floor lamp, move the floor lamp and set it down"</div>
+            </div>
+            <div class="vg-tile">
+              <span class="vg-tag">CHOIS+Img</span>
+              <video data-autoplay-on-view autoplay muted loop playsinline preload="auto" disableRemotePlayback x-webkit-airplay="deny"
+                poster="./static/results/sota_comparison/floorlamp/choisimg.jpg">
+                <source src="./static/results/sota_comparison/floorlamp/choisimg.mp4" type="video/mp4" />
+              </video>
+              <div class="vg-prompt">"Lift the floor lamp, move the floor lamp and set it down"</div>
+            </div>
+            <div class="vg-tile">
+              <span class="vg-tag">ViHOI*</span>
+              <video data-autoplay-on-view autoplay muted loop playsinline preload="auto" disableRemotePlayback x-webkit-airplay="deny"
+                poster="./static/results/sota_comparison/floorlamp/vihoi.jpg">
+                <source src="./static/results/sota_comparison/floorlamp/vihoi.mp4" type="video/mp4" />
+              </video>
+              <div class="vg-prompt">"Lift the floor lamp, move the floor lamp and set it down"</div>
+            </div>
+          </div>
+
+          <div class="figure-caption" style="padding-top: 1.2em">
+            <b>Qualitative comparison on FullBodyManipulation (SceneImg).</b>
+            Each row shows the <i>SceneImg</i> reference and generated motion
+            from CHOIS+Img, ViHOI*, and IMAGIN-4D under the same text prompt,
+            object shape, waypoints, and reference image. Single-token image
+            conditioning often misses contact, hand placement, object
+            orientation, or body-object layout. IMAGIN-4D better matches the
+            depicted interaction state.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- RESULTS: IMAGIN-4D GALLERY                                    -->
+    <!-- ============================================================ -->
+    <section class="hero is-light is-small">
+      <div class="hero-body">
+        <div class="container is-max-desktop">
+          <h2 class="title is-2 has-text-centered">
+            IMAGIN-4D Gallery
+          </h2>
+          <br />
+
+          <div class="video-grid grid-gallery">
+            <div class="vg-tile">
+              <span class="vg-tag tag-cond">Ref. Img</span>
+              <img src="./static/results/gallery/clothes_stand/cond.png" alt="reference image" />
+            </div>
+            <div class="vg-tile">
+              <span class="vg-tag tag-ours">Ours</span>
+              <video data-autoplay-on-view autoplay muted loop playsinline preload="auto" disableRemotePlayback x-webkit-airplay="deny"
+                poster="./static/results/gallery/clothes_stand/ours.jpg">
+                <source src="./static/results/gallery/clothes_stand/ours.mp4" type="video/mp4" />
+              </video>
+              <div class="vg-prompt">"Lift the clothes stand, move it and put it down"</div>
+            </div>
+            <div class="vg-tile">
+              <span class="vg-tag tag-cond">Ref. Img</span>
+              <img src="./static/results/gallery/chair_drag/cond.png" alt="reference image" />
+            </div>
+            <div class="vg-tile">
+              <span class="vg-tag tag-ours">Ours</span>
+              <video data-autoplay-on-view autoplay muted loop playsinline preload="auto" disableRemotePlayback x-webkit-airplay="deny"
+                poster="./static/results/gallery/chair_drag/ours.jpg">
+                <source src="./static/results/gallery/chair_drag/ours.mp4" type="video/mp4" />
+              </video>
+              <div class="vg-prompt">"Push the chair, drag it and set it back down"</div>
+            </div>
+            <div class="vg-tile">
+              <span class="vg-tag tag-cond">Ref. Img</span>
+              <img src="./static/results/gallery/plastic_box/cond.png" alt="reference image" />
+            </div>
+            <div class="vg-tile">
+              <span class="vg-tag tag-ours">Ours</span>
+              <video data-autoplay-on-view autoplay muted loop playsinline preload="auto" disableRemotePlayback x-webkit-airplay="deny"
+                poster="./static/results/gallery/plastic_box/ours.jpg">
+                <source src="./static/results/gallery/plastic_box/ours.mp4" type="video/mp4" />
+              </video>
+              <div class="vg-prompt">"Push the plastic box and set it back down"</div>
+            </div>
+            <div class="vg-tile">
+              <span class="vg-tag tag-cond">Ref. Img</span>
+              <img src="./static/results/gallery/chair_lift/cond.png" alt="reference image" />
+            </div>
+            <div class="vg-tile">
+              <span class="vg-tag tag-ours">Ours</span>
+              <video data-autoplay-on-view autoplay muted loop playsinline preload="auto" disableRemotePlayback x-webkit-airplay="deny"
+                poster="./static/results/gallery/chair_lift/ours.jpg">
+                <source src="./static/results/gallery/chair_lift/ours.mp4" type="video/mp4" />
+              </video>
+              <div class="vg-prompt">"Lift the chair, move it and put it down"</div>
+            </div>
+          </div>
+
+          <div class="figure-caption" style="padding-top: 0.6em">
+            Additional IMAGIN-4D results. Each pair shows the reference image
+            and the generated motion under the same text prompt and object
+            waypoints.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- RESULTS: SKETCH-TO-MOTION                                     -->
+    <!-- ============================================================ -->
+    <section class="hero is-small">
+      <div class="hero-body">
+        <div class="container is-max-desktop">
+          <h2 class="title is-2 has-text-centered">Sketch-to-Motion</h2>
+          <br />
+
+          <!-- Samples r2 + r8 -->
+          <div class="video-grid grid-sketch">
+            <div class="vg-tile">
+              <span class="vg-tag tag-cond">Sketch</span>
+              <img src="./static/results/sketch_to_motion/floorlamp/sketch.png" alt="sketch r2" />
+            </div>
+            <div class="vg-tile">
+              <span class="vg-tag tag-ours">Ours</span>
+              <video data-autoplay-on-view autoplay muted loop playsinline preload="auto" disableRemotePlayback x-webkit-airplay="deny"
+                poster="./static/results/sketch_to_motion/floorlamp/ours.jpg">
+                <source src="./static/results/sketch_to_motion/floorlamp/ours.mp4" type="video/mp4" />
+              </video>
+              <div class="vg-prompt">"Kick the base of floor lamp and set it down"</div>
+            </div>
+            <div class="vg-tile">
+              <span class="vg-tag tag-cond">Sketch</span>
+              <img src="./static/results/sketch_to_motion/suitcase/sketch.png" alt="sketch r8" />
+            </div>
+            <div class="vg-tile">
+              <span class="vg-tag tag-ours">Ours</span>
+              <video data-autoplay-on-view autoplay muted loop playsinline preload="auto" disableRemotePlayback x-webkit-airplay="deny"
+                poster="./static/results/sketch_to_motion/suitcase/ours.jpg">
+                <source src="./static/results/sketch_to_motion/suitcase/ours.mp4" type="video/mp4" />
+              </video>
+              <div class="vg-prompt">"Lift the suitcase, move the suitcase and put it down"</div>
+            </div>
+          </div>
+
+          <div class="figure-caption" style="padding-top: 1.2em">
+            <b>Sketch-to-motion.</b>
+            We replace the RGB reference image with a line drawing and retrain
+            the model. Despite removing texture, color, and scene appearance,
+            the model preserves the depicted interaction layout and generates
+            a complete motion sequence. This shows that IMAGIN-4D can also
+            support sketch-based conditioning, where users specify the desired
+            contact and body-object arrangement with a simple drawing.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- RESULTS: DATASET RENDERING                                    -->
+    <!-- ============================================================ -->
+    <section class="hero is-light is-small">
+      <div class="hero-body">
+        <div class="container is-max-desktop">
+          <h2 class="title is-2 has-text-centered">
+            Synthetic Image Rendering Pipeline
+          </h2>
+          <br />
+          <img
+            src="./static/figures/dataset_render.png"
+            alt="SceneImg / MeshImg / EditImg rendering pipeline"
+            class="result-figure"
+          />
+          <div class="figure-caption" style="padding-top: 1.2em">
+            <b>Conditioning image domains.</b>
+            We render conditioning images from each ground-truth sequence from
+            the FullBodyManipulation dataset and use the contact-centered
+            frame for evaluation. <i>MeshImg</i> is a clean body-object
+            render, <i>SceneImg</i> adds Replica scenes, body textures, and
+            posed objects, and <i>EditImg</i> applies image editing for more
+            photorealistic references. SceneImg is used for evaluation, while
+            MeshImg and EditImg analyze image-domain transfer.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Autoplay videos when they scroll into view, pause when they leave.
+         iOS Safari is strict: <video> must be muted + playsinline AND have
+         the autoplay attribute set in HTML; programmatic .play() may still
+         be denied under low-power mode. We also wire a one-time tap
+         fallback that starts any visible videos on the first user touch. -->
+    <script>
+      (function () {
+        var videos = document.querySelectorAll('video[data-autoplay-on-view]');
+        if (!videos.length) return;
+
+        function tryPlay(v) {
+          if (!v.paused) return;
+          var p = v.play();
+          if (p && typeof p.catch === 'function') {
+            p.catch(function () { /* ignore — controls/tap fallback handles it */ });
+          }
+        }
+
+        if (typeof IntersectionObserver === 'undefined') {
+          videos.forEach(tryPlay);
+        } else {
+          var io = new IntersectionObserver(
+            function (entries) {
+              entries.forEach(function (entry) {
+                if (entry.isIntersecting) {
+                  tryPlay(entry.target);
+                } else {
+                  entry.target.pause();
+                }
+              });
+            },
+            { threshold: 0.1, rootMargin: '50px 0px' }
+          );
+          videos.forEach(function (v) { io.observe(v); });
+        }
+
+        // One-time tap fallback: if autoplay was blocked (common on iOS low-
+        // power mode), the first touch anywhere on the page resumes all
+        // visible videos. Removes itself after firing.
+        function onFirstInteraction() {
+          videos.forEach(function (v) {
+            var r = v.getBoundingClientRect();
+            var visible = r.top < (window.innerHeight || 0) && r.bottom > 0;
+            if (visible) tryPlay(v);
+          });
+          window.removeEventListener('touchstart', onFirstInteraction, true);
+          window.removeEventListener('click', onFirstInteraction, true);
+        }
+        window.addEventListener('touchstart', onFirstInteraction, true);
+        window.addEventListener('click', onFirstInteraction, true);
+      })();
+    </script>
+  </body>
+</html>
