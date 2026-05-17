@@ -1,0 +1,242 @@
+window.HELP_IMPROVE_VIDEOJS = false;
+
+$(document).ready(function () {
+  // Check for click events on the navbar burger icon
+  $(".navbar-burger").click(function () {
+    // Toggle the "is-active" class on both the "navbar-burger" and the "navbar-menu"
+    $(".navbar-burger").toggleClass("is-active");
+    $(".navbar-menu").toggleClass("is-active");
+  });
+
+  // --- Options for the first carousel (e.g., results) ---
+  // IMPORTANT: Use the actual ID from your HTML below
+  const carousel1_ID = '#results-hcontact'; // <--- CHANGE TO YOUR FIRST CAROUSEL ID
+  const options1 = {
+    slidesToScroll: 5, // Consider scrolling 1 slide at a time for smoother experience
+    slidesToShow: 5,   // <--- Set desired number for carousel 1
+    loop: true,
+    infinite: false, // Note: loop=true might make infinite=true redundant/conflicting
+    pagination: true,
+    autoplay: true,
+    autoplaySpeed: 5000,
+  };
+
+
+
+  // --- Options for the second carousel (e.g., examples) ---
+  // IMPORTANT: Use the actual ID from your HTML below
+  const carousel2_ID = '#results-humanObjComp'; // <--- CHANGE TO YOUR SECOND CAROUSEL ID
+  const options2 = {
+    slidesToScroll: 3, // Consider scrolling 1 slide at a time for smoother experience
+    slidesToShow: 3,   // <--- Set desired number for carousel 1
+    loop: true,
+    infinite: false, // Note: loop=true might make infinite=true redundant/conflicting
+    pagination: true,
+    autoplay: true,
+    autoplaySpeed: 5000,
+  };
+
+  const carousel3_ID = '#results-humanObj'; // <--- CHANGE TO YOUR SECOND CAROUSEL ID
+  const options3 = {
+    slidesToScroll: 4, // Consider scrolling 1 slide at a time for smoother experience
+    slidesToShow: 4,   // <--- Set desired number for carousel 1
+    loop: true,
+    infinite: false, // Note: loop=true might make infinite=true redundant/conflicting
+    pagination: true,
+    autoplay: true,
+    autoplaySpeed: 5000,
+  };
+
+  const carousel4_ID = '#results-ocontact'; // <--- CHANGE TO YOUR FIRST CAROUSEL ID
+  const options4 = {
+    slidesToScroll: 3, // Consider scrolling 1 slide at a time for smoother experience
+    slidesToShow: 3,   // <--- Set desired number for carousel 1
+    loop: true,
+    infinite: false, // Note: loop=true might make infinite=true redundant/conflicting
+    pagination: true,
+    autoplay: true,
+    autoplaySpeed: 2500,
+  };
+
+  // --- Initialize Carousels Individually ---
+  let activeCarousels = []; // To store instances if needed later
+
+  // Initialize Carousel 1 if the element exists
+  const carouselElement1 = document.querySelector(carousel1_ID);
+  if (carouselElement1) {
+    const instance1 = bulmaCarousel.attach(carousel1_ID, options1);
+    if(instance1.length > 0) { // attach returns an array
+        activeCarousels.push(instance1[0]);
+         // Add listener specifically to this carousel if needed
+         instance1[0].on('before:show', (state) => {
+             console.log(`State for ${carousel1_ID}:`, state);
+         });
+    }
+  } else {
+      console.warn(`Carousel element '${carousel1_ID}' not found.`);
+  }
+
+
+  // Initialize Carousel 2 if the element exists
+  const carouselElement2 = document.querySelector(carousel2_ID);
+  if (carouselElement2) {
+    const instance2 = bulmaCarousel.attach(carousel2_ID, options2);
+     if(instance2.length > 0) { // attach returns an array
+         activeCarousels.push(instance2[0]);
+         // Add listener specifically to this carousel if needed
+         instance2[0].on('before:show', (state) => {
+             console.log(`State for ${carousel2_ID}:`, state);
+         });
+     }
+  } else {
+    console.warn(`Carousel element '${carousel2_ID}' not found.`);
+  }
+
+    // Initialize Carousel 3 if the element exists
+    const carouselElement3 = document.querySelector(carousel3_ID);
+    if (carouselElement3) {
+      const instance3 = bulmaCarousel.attach(carousel3_ID, options3);
+       if(instance3.length > 0) { // attach returns an array
+           activeCarousels.push(instance3[0]);
+           // Add listener specifically to this carousel if needed
+           instance3[0].on('before:show', (state) => {
+               console.log(`State for ${carousel3_ID}:`, state);
+           });
+       }
+    } else {
+      console.warn(`Carousel element '${carousel3_ID}' not found.`);
+    }
+
+      // Initialize Carousel 4 if the element exists
+    const carouselElement4 = document.querySelector(carousel4_ID);
+    if (carouselElement4) {
+      const instance4 = bulmaCarousel.attach(carousel4_ID, options4);
+        if(instance4.length > 0) { // attach returns an array
+            activeCarousels.push(instance4[0]);
+            // Add listener specifically to this carousel if needed
+            instance4[0].on('before:show', (state) => {
+                console.log(`State for ${carousel4_ID}:`, state);
+            });
+        }
+    } else {
+      console.warn(`Carousel element '${carousel4_ID}' not found.`);
+    }
+
+  // Access to bulmaCarousel instance of a specific element (this part might still be relevant)
+  // Ensure #my-element is different from your carousel IDs unless intended
+  let element = document.querySelector("#my-element");
+  if (element && element.bulmaCarousel) {
+    // bulmaCarousel instance is available as element.bulmaCarousel
+    element.bulmaCarousel.on("before-show", function (state) {
+      console.log("State for #my-element:", state);
+    });
+  }
+
+  // Clamp function (unrelated to carousels)
+  Number.prototype.clamp = function (min, max) {
+    return Math.min(Math.max(this, min), max);
+  };
+
+  // --- Pause/Resume functionality for carousels ---
+  let carouselPauseStates = {
+    carousel1: false,
+    carousel2: false,
+    carousel3: false,
+    carousel4: false
+  };
+
+  // Store carousel instances for easy access
+  const carouselInstances = {
+    carousel1: activeCarousels.find(c => c.element && c.element.id === 'results-hcontact'),
+    carousel2: activeCarousels.find(c => c.element && c.element.id === 'results-humanObjComp'),
+    carousel3: activeCarousels.find(c => c.element && c.element.id === 'results-humanObj'),
+    carousel4: activeCarousels.find(c => c.element && c.element.id === 'results-ocontact')
+  };
+
+  // Function to toggle pause/resume for a specific carousel
+  function toggleCarouselPause(carouselKey, buttonId) {
+    const instance = carouselInstances[carouselKey];
+    const button = document.getElementById(buttonId);
+    
+    if (!instance || !button) return;
+    
+    if (carouselPauseStates[carouselKey]) {
+      // Resume
+      instance.start();
+      carouselPauseStates[carouselKey] = false;
+      button.innerHTML = '<i class="fas fa-pause"></i> Pause';
+      button.classList.remove('paused');
+    } else {
+      // Pause
+      instance.stop();
+      carouselPauseStates[carouselKey] = true;
+      button.innerHTML = '<i class="fas fa-play"></i> Resume';
+      button.classList.add('paused');
+    }
+  }
+
+  // Add event listeners for pause buttons
+  const pauseBtn1 = document.getElementById('pauseBtn1');
+  if (pauseBtn1) {
+    pauseBtn1.addEventListener('click', () => toggleCarouselPause('carousel1', 'pauseBtn1'));
+  }
+
+  const pauseBtn2 = document.getElementById('pauseBtn2');
+  if (pauseBtn2) {
+    pauseBtn2.addEventListener('click', () => toggleCarouselPause('carousel2', 'pauseBtn2'));
+  }
+
+  const pauseBtn3 = document.getElementById('pauseBtn3');
+  if (pauseBtn3) {
+    pauseBtn3.addEventListener('click', () => toggleCarouselPause('carousel3', 'pauseBtn3'));
+  }
+
+  const pauseBtn4 = document.getElementById('pauseBtn4');
+  if (pauseBtn4) {
+    pauseBtn4.addEventListener('click', () => toggleCarouselPause('carousel4', 'pauseBtn4'));
+  }
+
+  // Global pause all button functionality (optional)
+  function pauseAllCarousels() {
+    Object.keys(carouselInstances).forEach(key => {
+      const instance = carouselInstances[key];
+      if (instance && !carouselPauseStates[key]) {
+        instance.stop();
+        carouselPauseStates[key] = true;
+      }
+    });
+    
+    // Update all button states
+    ['pauseBtn1', 'pauseBtn2', 'pauseBtn3', 'pauseBtn4'].forEach(btnId => {
+      const btn = document.getElementById(btnId);
+      if (btn) {
+        btn.innerHTML = '<i class="fas fa-play"></i> Resume';
+        btn.classList.add('paused');
+      }
+    });
+  }
+
+  function resumeAllCarousels() {
+    Object.keys(carouselInstances).forEach(key => {
+      const instance = carouselInstances[key];
+      if (instance && carouselPauseStates[key]) {
+        instance.start();
+        carouselPauseStates[key] = false;
+      }
+    });
+    
+    // Update all button states
+    ['pauseBtn1', 'pauseBtn2', 'pauseBtn3', 'pauseBtn4'].forEach(btnId => {
+      const btn = document.getElementById(btnId);
+      if (btn) {
+        btn.innerHTML = '<i class="fas fa-pause"></i> Pause';
+        btn.classList.remove('paused');
+      }
+    });
+  }
+
+  // Expose global functions to window for potential external use
+  window.pauseAllCarousels = pauseAllCarousels;
+  window.resumeAllCarousels = resumeAllCarousels;
+
+}); // End document ready
